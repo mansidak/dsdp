@@ -1,0 +1,5 @@
+/* src/index.css */
+
+.draggable-block {
+  transition: transform 0.1s;
+}

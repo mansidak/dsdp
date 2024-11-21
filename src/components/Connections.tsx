@@ -1,10 +1,10 @@
 import React from 'react';
-import { BlockData } from '../constants';
+import { BlockData, Connection } from '../constants';
 import { useDragLayer } from 'react-dnd';
 
 interface ConnectionsProps {
   blocks: { [key: number]: BlockData };
-  connections: { from: number; to: number }[];
+  connections: Connection[];
 }
 
 const Connections: React.FC<ConnectionsProps> = ({ blocks, connections }) => {
@@ -17,12 +17,20 @@ const Connections: React.FC<ConnectionsProps> = ({ blocks, connections }) => {
 
   const getBlockPosition = (block: BlockData) => {
     if (isDragging && item && item.id === block.id && offset) {
-      return {
+      const pos = {
         left: block.left + offset.x,
         top: block.top + offset.y,
       };
+      return pos;
     }
     return { left: block.left, top: block.top };
+  };
+
+  const getConnectionPoint = (block: BlockData, side: 'left' | 'right') => {
+    const pos = getBlockPosition(block);
+    const x = pos.left + (side === 'left' ? 0 : 300);
+    const y = pos.top + 17.5;
+    return { x, y };
   };
 
   return (
@@ -35,27 +43,21 @@ const Connections: React.FC<ConnectionsProps> = ({ blocks, connections }) => {
       }}
     >
       {connections.map((connection, index) => {
-        const fromBlock = blocks[connection.from];
-        const toBlock = blocks[connection.to];
+        const fromBlock = blocks[connection.from.id];
+        const toBlock = blocks[connection.to.id];
         if (fromBlock && toBlock) {
-          const fromPos = getBlockPosition(fromBlock);
-          const toPos = getBlockPosition(toBlock);
-
-          const x1 = fromPos.left + 50;
-          const y1 = fromPos.top + 25;
-          const x2 = toPos.left + 50;
-          const y2 = toPos.top + 25;
+          const fromPoint = getConnectionPoint(fromBlock, connection.from.side);
+          const toPoint = getConnectionPoint(toBlock, connection.to.side);
 
           return (
             <line
               key={index}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
+              x1={fromPoint.x}
+              y1={fromPoint.y}
+              x2={toPoint.x}
+              y2={toPoint.y}
               stroke="black"
               strokeWidth="2"
-              strokeDasharray="5,5"
             />
           );
         }

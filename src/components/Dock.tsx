@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { ItemTypes } from '../constants';
 import Block from './Block';
@@ -32,9 +32,20 @@ const dockBlocks = [
 ];
 
 
+interface DockBlockProps {
+  id: string;
+  category: string;
+  color: string;
+  name: string;
+}
+
 const Dock: React.FC = () => {
   return (
-    <div style={{ width: '200px', backgroundColor: '#eee', padding: '10px', overflowY: 'auto' }}>
+    <div style={{ 
+      width: '500px',
+      backgroundColor: 'white',
+      overflowY: 'auto'
+    }}>
       {dockBlocks.map((block) => (
         <DockBlock key={block.id} {...block} />
       ))}
@@ -58,12 +69,29 @@ const DockBlock: React.FC<DockBlockProps> = ({ id, category, color, name }) => {
     }),
   });
 
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div
       ref={drag}
-      style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move', marginBottom: '10px' }}
+      style={{
+        width: '300px', // Set the width of the DockBlock
+        height: '35px', // Ensure the height remains the same
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'move',
+        marginBottom: '20px',
+        marginLeft:'10px',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        transform: isHovered ? 'translateX(3px)' : 'translateY(0)',
+        boxShadow: isHovered 
+          ? '0 6px 10px rgba(0, 0, 0, 0.15)' 
+          : '0 2px 4px rgba(0, 0, 0, 0.1)',
+        borderRadius: '10px',
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <Block color={color} name={name} />
+      <Block color={color} name={name} category={category} pendingConnection={null} />
     </div>
   );
 };

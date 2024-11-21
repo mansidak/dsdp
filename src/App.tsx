@@ -4,13 +4,23 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import Dock from './components/Dock';
 import Canvas from './components/Canvas';
 import { BlockData } from './constants';
+import CustomDragLayer from './components/CustomDragLayer';
+
+interface Connection {
+  from: { id: number; side: 'left' | 'right' };
+  to: { id: number; side: 'left' | 'right' };
+}
 
 const App: React.FC = () => {
   const [blocks, setBlocks] = useState<{ [key: number]: BlockData }>({});
   const nextIdRef = useRef(1);
   const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null);
   const [connectionSelection, setConnectionSelection] = useState<number[]>([]);
-  const [connections, setConnections] = useState<{ from: number; to: number }[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [pendingConnection, setPendingConnection] = useState<{
+    id: number;
+    side: 'left' | 'right';
+  } | null>(null);
 
   const addBlockToCanvas = useCallback(
     (block: Omit<BlockData, 'id'> & { left: number; top: number }) => {
@@ -33,7 +43,7 @@ const App: React.FC = () => {
       return newBlocks;
     });
     setConnections((prevConnections) =>
-      prevConnections.filter((conn) => conn.from !== id && conn.to !== id)
+      prevConnections.filter((conn) => conn.from.id !== id && conn.to.id !== id)
     );
     if (selectedBlockId === id) {
       setSelectedBlockId(null);
@@ -55,11 +65,14 @@ const App: React.FC = () => {
             const to = id;
             const exists = connections.some(
               (conn) =>
-                (conn.from === from && conn.to === to) || (conn.from === to && conn.to === from)
+                (conn.from.id === from && conn.to.id === to) || (conn.from.id === to && conn.to.id === from)
             );
             if (!exists) {
-              const newConnection = { from: from, to: to };
-              setConnections((prevConnections) => [...prevConnections, newConnection]);
+              const newConnection: Connection = {
+                from: { id: from, side: 'left' },
+                to: { id: to, side: 'left' }
+              };
+              setConnections(prev => [...prev, newConnection]);
             }
             return [];
           } else {
@@ -80,51 +93,58 @@ const App: React.FC = () => {
     setConnectionSelection([]);
   }, []);
 
-  const exportCSV = useCallback(() => {
-    const categoryCounts: { [category: string]: number } = {};
-    const blockRows = [['ID', 'Name', 'Category', 'Color', 'Left', 'Top']];
-    Object.values(blocks).forEach((block) => {
-      categoryCounts[block.category] = (categoryCounts[block.category] || 0) + 1;
-      blockRows.push([
-        block.id.toString(),
-        block.name,
-        block.category,
-        block.color,
-        block.left.toString(),
-        block.top.toString(),
-      ]);
+  const exportCSV = () => {
+    const csvContent = ['From,To'];
+    
+    connections.forEach(connection => {
+      const fromBlock = blocks[connection.from.id];
+      const toBlock = blocks[connection.to.id];
+      
+      if (fromBlock && toBlock) {
+        csvContent.push(`${fromBlock.name},${toBlock.name}`);
+      }
     });
 
-    const connectionRows = [['From ID', 'To ID']];
-    connections.forEach((conn) => {
-      connectionRows.push([conn.from.toString(), conn.to.toString()]);
-    });
-
-    let csvContent = 'Category,Count\n';
-    Object.entries(categoryCounts).forEach(([category, count]) => {
-      csvContent += `${category},${count}\n`;
-    });
-
-    csvContent += '\nBlocks\n';
-    csvContent += blockRows.map((row) => row.join(',')).join('\n');
-
-    csvContent += '\n\nConnections\n';
-    csvContent += connectionRows.map((row) => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob([csvContent.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'blocks.csv');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'connections.csv');
+    link.style.visibility = 'hidden';
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [blocks, connections]);
+  };
+
+  const handleDotClick = (blockId: number, side: 'left' | 'right') => {
+    if (!pendingConnection) {
+      setPendingConnection({ id: blockId, side });
+    } else if (pendingConnection.id !== blockId) {
+      const exists = connections.some(
+        conn => 
+          (conn.from.id === pendingConnection.id && conn.to.id === blockId) ||
+          (conn.from.id === blockId && conn.to.id === pendingConnection.id)
+      );
+      
+      if (!exists) {
+        setConnections(prev => [
+          ...prev,
+          {
+            from: pendingConnection,
+            to: { id: blockId, side }
+          }
+        ]);
+      }
+      setPendingConnection(null);
+    }
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
       <div style={{ display: 'flex', height: '100vh', position: 'relative' }}>
+        <CustomDragLayer />
         <Dock />
         <Canvas
           blocks={blocks}
@@ -136,6 +156,8 @@ const App: React.FC = () => {
           onCanvasClick={handleCanvasClick}
           connections={connections}
           deleteBlock={deleteBlock}
+          handleDotClick={handleDotClick}
+          pendingConnection={pendingConnection}
         />
         <button
           onClick={exportCSV}

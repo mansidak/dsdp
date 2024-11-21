@@ -42,7 +42,7 @@ const CustomDragLayer: React.FC = () => {
   return (
     <div style={layerStyles}>
       <div style={getItemStyles(initialOffset, currentOffset)}>
-        <Block color={item.color} name={item.name} />
+        <Block color={item.color} name={item.name} category={item.category} pendingConnection={null} />
       </div>
     </div>
   );

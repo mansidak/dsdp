@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
-import { ItemTypes } from '../constants';
+import { ItemTypes, Connection } from '../constants';
 import Block from './Block';
 
 interface DraggableBlockProps {
@@ -15,6 +15,9 @@ interface DraggableBlockProps {
   selected: boolean;
   connectionSelected: boolean;
   deleteBlock: (id: number) => void;
+  onDotClick: (blockId: number, side: 'left' | 'right') => void;
+  pendingConnection: { id: number; side: 'left' | 'right' } | null;
+  connections: Connection[];
 }
 
 const DraggableBlock: React.FC<DraggableBlockProps> = ({
@@ -29,14 +32,16 @@ const DraggableBlock: React.FC<DraggableBlockProps> = ({
   selected,
   connectionSelected,
   deleteBlock,
+  onDotClick,
+  pendingConnection,
+  connections,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const [{ isDragging, offset }, drag] = useDrag({
+  const [{ isDragging }, drag, preview] = useDrag({
     type: ItemTypes.BLOCK,
     item: { id, category, color, name, left, top },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
-      offset: monitor.getDifferenceFromInitialOffset(),
     }),
     end: (item, monitor) => {
       const delta = monitor.getDifferenceFromInitialOffset();
@@ -44,27 +49,49 @@ const DraggableBlock: React.FC<DraggableBlockProps> = ({
         moveBlock(id, left + delta.x, top + delta.y);
       }
     },
+    options: {
+      dropEffect: 'move'
+    },
+    previewOptions: {
+      captureDraggingState: true,
+    }
   });
 
+  // Disable the default drag preview
+  useEffect(() => {
+    preview(null);
+  }, [preview]);
+
+  const [showDots, setShowDots] = useState(false);
+  const [dotsLocked, setDotsLocked] = useState(false);
+
+  useEffect(() => {
+    if (pendingConnection) {
+      setDotsLocked(true);
+      setShowDots(true);
+    } else {
+      setDotsLocked(false);
+    }
+  }, [pendingConnection]);
+
   drag(ref);
-
-  const currentLeft = isDragging && offset ? left + offset.x : left;
-  const currentTop = isDragging && offset ? top + offset.y : top;
-
   return (
     <div
       ref={ref}
+      onMouseEnter={() => !dotsLocked && setShowDots(true)}
+      onMouseLeave={() => !dotsLocked && setShowDots(false)}
       onClick={(e) => {
         e.stopPropagation();
         onClick(id, e);
       }}
       style={{
         position: 'absolute',
-        left: currentLeft,
-        top: currentTop,
+        left: left,
+        top: top,
         cursor: 'move',
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0 : 1,
         border: connectionSelected ? '2px dashed black' : 'none',
+        display: isDragging ? 'none' : 'block',
       }}
     >
       {selected && (
@@ -89,7 +116,16 @@ const DraggableBlock: React.FC<DraggableBlockProps> = ({
           x
         </button>
       )}
-      <Block color={color} name={name} />
+      <Block 
+        id={id}
+        color={color} 
+        name={name} 
+        category={category}
+        showDots={!isDragging && showDots}
+        onDotClick={(side) => onDotClick(id, side as 'left' | 'right')}
+        pendingConnection={pendingConnection}
+        connections={connections}
+      />
     </div>
   );
 };

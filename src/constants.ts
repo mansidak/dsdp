@@ -11,3 +11,8 @@ export const ItemTypes = {
     top: number;
   }
   
+  export interface Connection {
+    from: { id: number; side: 'left' | 'right' };
+    to: { id: number; side: 'left' | 'right' };
+  }
+  

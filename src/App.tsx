@@ -94,14 +94,19 @@ const App: React.FC = () => {
   }, []);
 
   const exportCSV = () => {
-    const csvContent = ['From,To'];
+    const csvContent = [
+      'Type,,Subtype,',
+      'From,To,From,To'
+    ];
     
     connections.forEach(connection => {
       const fromBlock = blocks[connection.from.id];
       const toBlock = blocks[connection.to.id];
       
       if (fromBlock && toBlock) {
-        csvContent.push(`${fromBlock.name},${toBlock.name}`);
+        csvContent.push(
+          `${fromBlock.category},${toBlock.category},${fromBlock.name},${toBlock.name}`
+        );
       }
     });
 

@@ -17,11 +17,10 @@ const Connections: React.FC<ConnectionsProps> = ({ blocks, connections }) => {
 
   const getBlockPosition = (block: BlockData) => {
     if (isDragging && item && item.id === block.id && offset) {
-      const pos = {
+      return {
         left: block.left + offset.x,
         top: block.top + offset.y,
       };
-      return pos;
     }
     return { left: block.left, top: block.top };
   };
@@ -42,6 +41,18 @@ const Connections: React.FC<ConnectionsProps> = ({ blocks, connections }) => {
         pointerEvents: 'none',
       }}
     >
+      <defs>
+        <marker
+          id="arrowhead"
+          markerWidth="10"
+          markerHeight="7"
+          refX="9"
+          refY="3.5"
+          orient="auto"
+        >
+          <polygon points="0 0, 10 3.5, 0 7" fill="black" />
+        </marker>
+      </defs>
       {connections.map((connection, index) => {
         const fromBlock = blocks[connection.from.id];
         const toBlock = blocks[connection.to.id];
@@ -58,6 +69,7 @@ const Connections: React.FC<ConnectionsProps> = ({ blocks, connections }) => {
               y2={toPoint.y}
               stroke="black"
               strokeWidth="2"
+              markerEnd="url(#arrowhead)"
             />
           );
         }
